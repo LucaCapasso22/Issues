@@ -1,0 +1,32 @@
+{
+  "name": "issues-electron",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A compact GitHub Projects companion for Windows and macOS",
+  "author": "Luca Capasso",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/main.mjs",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "demo": "node scripts/start.mjs --demo",
+    "test": "node scripts/test.mjs",
+    "check": "node scripts/check.mjs",
+    "pack": "electron-builder --dir --publish never",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "dist:win:zip": "electron-builder --win zip --x64 --publish never",
+    "dist:mac": "electron-builder --mac zip --publish never"
+  },
+  "devDependencies": { "electron": "44.3.0", "electron-builder": "26.15.3" },
+  "build": {
+    "appId": "app.issues.electron",
+    "productName": "Issues Electron",
+    "asar": true,
+    "directories": { "output": "dist", "buildResources": "assets" },
+    "files": ["src/**/*", "renderer/**/*", "assets/**/*", "package.json", "LICENSE", "!**/._*", "!**/.DS_Store"],
+    "mac": { "category": "public.app-category.productivity", "icon": "assets/AppIcon.icns", "minimumSystemVersion": "13.0", "identity": null, "target": ["zip"] },
+    "win": { "icon": "assets/icon.png", "target": [{"target":"nsis","arch":["x64"]}] },
+    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "Issues Electron" }
+  }
+}
