@@ -1,0 +1,21 @@
+.build/
+.swiftpm/
+release/
+.DS_Store
+._*
+.superpowers/
+
+# Local credentials and signing material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.mobileprovision
+
+# Local development notes (not public project documentation)
+/docs/*.md
+/docs/superpowers/
+*.log

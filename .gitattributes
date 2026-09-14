@@ -1,0 +1,4 @@
+Sources/IssuesDesktop/Web/vendor/** linguist-vendored
+*.png binary
+*.icns binary
+*.sh text eol=lf

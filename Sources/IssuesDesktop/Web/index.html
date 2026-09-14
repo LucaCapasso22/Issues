@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Issues</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="app" aria-live="polite">
+      <section id="main-view" class="main-view" aria-label="GitHub issues">
+        <header class="app-header">
+          <div class="header-tools">
+            <label class="breadcrumb project-picker" for="project-select">
+              <span data-icon="github" aria-hidden="true"></span>
+              <select id="project-select" aria-label="Current GitHub project"></select>
+              <span class="project-chevron" aria-hidden="true"></span>
+            </label>
+            <div class="header-actions">
+              <button id="refresh-button" class="icon-button" type="button" aria-label="Refresh issues"><span data-icon="refresh" aria-hidden="true"></span></button>
+              <button id="settings-button" class="icon-button" type="button" aria-label="Open settings" aria-pressed="false"><span data-icon="settings" aria-hidden="true"></span></button>
+            </div>
+          </div>
+          <div id="list-heading" class="heading-block">
+            <div class="title-line"><h1>Your issues.</h1><span id="demo-badge" class="demo-badge" hidden>DEMO</span></div>
+            <p id="summary" class="summary"></p>
+          </div>
+          <div id="settings-heading" class="settings-heading" hidden>
+            <button id="settings-back" class="back-button" type="button"><span data-icon="chevron-left" aria-hidden="true"></span>Issues</button>
+            <h1>Settings</h1>
+          </div>
+        </header>
+
+        <section id="onboarding-view" class="content-view centered-view" hidden aria-labelledby="onboarding-title">
+          <div class="onboarding-mark" aria-hidden="true"><span data-icon="circle-dot"></span></div>
+          <p class="eyebrow">ISSUES AT A GLANCE</p>
+          <h1 id="onboarding-title">Connect a project.</h1>
+          <p class="support-copy">Keep project issues visible while you work, without leaving your desktop.</p>
+          <div id="onboarding-error" class="error-banner inline-error" role="alert" hidden>
+            <span data-icon="alert" aria-hidden="true"></span><div><strong>Connection failed</strong><span id="onboarding-error-message"></span></div>
+          </div>
+          <form id="onboarding-form" class="connection-form">
+            <label class="field-label" for="onboarding-project">GitHub project URL</label>
+            <input id="onboarding-project" class="text-field" name="projectURL" type="url" inputmode="url" autocomplete="url" placeholder="https://github.com/users/name/projects/1" required />
+            <fieldset class="method-picker">
+              <legend>Connection</legend>
+              <label><input type="radio" name="onboarding-method" value="cli" checked /> <span><strong>GitHub CLI</strong><small>Use the active session on this Mac</small></span></label>
+              <label><input type="radio" name="onboarding-method" value="token" /> <span><strong>Personal token</strong><small>Stored in the macOS Keychain</small></span></label>
+            </fieldset>
+            <p id="onboarding-cli-help" class="cli-scope-help">To read and edit Projects, run in Terminal: <code>gh auth refresh -h github.com -s read:project,project</code>. Creating issues also requires repository Issues write access.</p>
+            <label id="onboarding-token-label" class="field-label token-field" for="onboarding-token" hidden>GitHub token</label>
+            <input id="onboarding-token" class="text-field token-field" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" hidden />
+            <button id="connect-button" class="primary-button" type="submit">Connect project</button>
+          </form>
+          <button id="demo-button" class="text-button" type="button">Explore with demo data</button>
+        </section>
+
+        <section id="issues-view" class="content-view issues-view" aria-labelledby="list-heading">
+          <div id="error-banner" class="error-banner" role="status" hidden>
+            <span data-icon="alert" aria-hidden="true"></span><div><strong>Sync interrupted</strong><span id="error-message"></span></div><button id="error-retry" type="button">Retry</button>
+          </div>
+          <div id="mutation-banner" class="notice-banner" role="status" hidden>
+            <span data-icon="circle-dot" aria-hidden="true"></span><span id="mutation-notice"></span><button id="open-created-issue" type="button" hidden>Open issue</button>
+          </div>
+          <label class="search-box" for="search-input">
+            <span data-icon="search" aria-hidden="true"></span><input id="search-input" type="search" autocomplete="off" placeholder="Search issues…" aria-label="Search issues" /><kbd>⌘K</kbd>
+          </label>
+          <div class="issue-controls">
+            <div class="scope-picker" role="group" aria-label="Issue assignment">
+              <button id="filter-mine" type="button" aria-pressed="true">Assigned to me</button>
+              <button id="filter-everyone" type="button" aria-pressed="false">Everyone</button>
+            </div>
+            <button id="new-issue-button" class="primary-button compact-button" type="button"><span data-icon="plus" aria-hidden="true"></span>New issue</button>
+          </div>
+          <div id="loading-state" class="loading-state" hidden><span class="spinner" aria-hidden="true"></span>Refreshing…</div>
+          <div id="issue-list" class="issue-list"></div>
+        </section>
+
+        <section id="settings-view" class="content-view settings-view" hidden aria-labelledby="settings-heading">
+          <div id="settings-error" class="error-banner inline-error" role="alert" hidden>
+            <span data-icon="alert" aria-hidden="true"></span><div><strong>Settings were not updated</strong><span id="settings-error-message"></span></div>
+          </div>
+          <form id="settings-form">
+            <div class="settings-section">
+              <div class="settings-section-title"><span id="connection-section-title">CURRENT PROJECT</span><span id="connection-status" class="status-pill">Active</span></div>
+              <p class="shared-account-copy">Projects share the same GitHub account. Personal tokens stay in the macOS Keychain.</p>
+              <label class="field-label" for="settings-project">GitHub project URL</label>
+              <input id="settings-project" class="text-field" name="projectURL" type="url" inputmode="url" autocomplete="url" required />
+              <fieldset class="method-picker compact-picker">
+                <legend>Connection</legend>
+                <label><input type="radio" name="settings-method" value="cli" /> <span><strong>GitHub CLI</strong><small>Local session</small></span></label>
+                <label><input type="radio" name="settings-method" value="token" /> <span><strong>Personal token</strong><small id="saved-token-label">No saved token</small></span></label>
+              </fieldset>
+              <p id="settings-cli-help" class="cli-scope-help">If Projects cannot be edited, run: <code>gh auth refresh -h github.com -s read:project,project</code>. Creating issues also requires repository Issues write access.</p>
+              <label id="settings-token-label" class="field-label token-field" for="settings-token" hidden>New GitHub token</label>
+              <input id="settings-token" class="text-field token-field" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="Leave empty to keep the saved token" hidden />
+              <div class="connection-actions">
+                <button id="save-connection-button" class="primary-button" type="submit">Save connection</button>
+                <button id="cancel-add-project" class="secondary-button" type="button" hidden>Cancel</button>
+              </div>
+              <button id="add-project-button" class="add-project-button" type="button"><span data-icon="plus" aria-hidden="true"></span>Add project</button>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-title">VISIBLE STATUSES</div>
+              <p class="settings-section-copy">Choose which project sections appear on the home screen. This never changes an issue on GitHub.</p>
+              <div id="status-visibility-list" class="status-visibility-list"></div>
+              <details class="advanced-settings">
+                <summary>Progress preview mapping</summary>
+                <label class="field-label" for="in-progress-statuses">In progress</label>
+                <input id="in-progress-statuses" class="text-field" type="text" autocomplete="off" placeholder="In Progress, Doing" />
+                <p class="field-help">These statuses appear in the floating progress preview.</p>
+                <label class="field-label" for="todo-statuses">To do</label>
+                <input id="todo-statuses" class="text-field" type="text" autocomplete="off" placeholder="Todo, Backlog" />
+              </details>
+            </div>
+            <div class="settings-section preference-list">
+              <label class="switch-row" for="always-on-top"><span><strong>Always on top</strong><small>Keep the window above other apps</small></span><input id="always-on-top" type="checkbox" role="switch" /></label>
+            </div>
+            <button id="disconnect-button" class="danger-button" type="button">Disconnect project</button>
+            <button id="leave-demo-button" class="secondary-button" type="button" hidden>Leave demo</button>
+            <button id="quit-button" class="text-button quit-button" type="button">Quit Issues</button>
+          </form>
+        </section>
+
+        <footer id="app-footer" class="app-footer">
+          <span id="last-sync" class="last-sync"></span>
+          <button id="minimize-button" class="secondary-button compact-button" type="button"><span data-icon="minimize" aria-hidden="true"></span>Minimize</button>
+        </footer>
+      </section>
+
+      <section id="icon-view" class="floating-view icon-view" hidden aria-label="Issues in progress">
+        <button id="orb-button" class="orb" type="button" aria-label="Open issues"><span data-icon="circle-dot" aria-hidden="true"></span><span id="orb-badge" class="orb-badge" hidden></span></button>
+      </section>
+      <section id="focus-view" class="floating-view focus-view" hidden>
+        <button id="focus-button" class="focus-capsule" type="button" aria-label="Open focused issue"><span class="focus-icon" data-icon="circle-dot" aria-hidden="true"></span><span class="focus-copy"><small>IN FOCUS <span id="focus-number"></span></small><strong id="focus-title">Open issues</strong></span><span data-icon="expand" aria-hidden="true"></span></button>
+      </section>
+      <section id="preview-view" class="floating-view preview-view" hidden aria-label="Issues in progress preview">
+        <div class="preview-card"><div class="preview-header"><span>IN PROGRESS</span><span id="preview-count"></span></div><div id="preview-list" class="preview-list"></div><div id="preview-empty" class="preview-empty" hidden>No issues in progress.</div></div>
+        <button id="preview-orb" class="orb preview-orb" type="button" aria-label="Open all issues"><span data-icon="circle-dot" aria-hidden="true"></span><span id="preview-badge" class="orb-badge" hidden></span></button>
+      </section>
+    </main>
+
+    <dialog id="issue-dialog" class="modal-dialog" aria-labelledby="issue-dialog-title">
+      <section class="modal-card issue-modal-card">
+        <header class="modal-header">
+          <div class="modal-heading"><p id="issue-dialog-meta" class="modal-eyebrow"></p><h2 id="issue-dialog-title"></h2></div>
+          <button id="issue-dialog-close" class="icon-button modal-close" type="button" aria-label="Close issue details"><span data-icon="close" aria-hidden="true"></span></button>
+        </header>
+        <div id="issue-dialog-scroll" class="modal-scroll issue-detail-scroll" tabindex="0">
+          <p id="issue-dialog-body" class="issue-dialog-body"></p>
+          <section class="detail-assignment" aria-labelledby="detail-assignees-heading">
+            <div class="composer-section-heading">
+              <div><h3 id="detail-assignees-heading">Assignees</h3><p>Replace the people assigned to this issue.</p></div>
+              <div class="modal-actions"><button id="detail-assign-self" class="text-button compact-action" type="button">Assign me</button><button id="detail-assignee-save" class="secondary-button compact-save" type="button">Save</button></div>
+            </div>
+            <input id="detail-assignee-search" class="text-field compact-search" type="search" autocomplete="off" placeholder="Find a person" aria-label="Find an assignee" />
+            <div id="detail-assignee-choices" class="choice-grid" role="group" aria-label="Issue assignees"></div>
+            <p id="detail-assignee-help" class="capability-note"></p>
+          </section>
+          <div id="detail-mutation-error" class="dialog-feedback error-feedback" role="alert" hidden></div>
+        </div>
+        <footer class="modal-footer detail-footer">
+          <label class="compact-field" for="detail-status-select"><span id="detail-status-label">Status</span><select id="detail-status-select" class="select-field"></select></label>
+          <div class="modal-actions">
+            <button id="detail-pin" class="secondary-button" type="button"><span data-icon="pin" aria-hidden="true"></span><span id="detail-pin-label">Keep in focus</span></button>
+            <button id="detail-open" class="secondary-button" type="button"><span data-icon="external" aria-hidden="true"></span>GitHub</button>
+          </div>
+        </footer>
+      </section>
+    </dialog>
+
+    <dialog id="new-issue-dialog" class="modal-dialog" aria-labelledby="new-issue-title">
+      <form id="new-issue-form" class="modal-card create-modal-card">
+        <header class="modal-header">
+          <div class="modal-heading"><p class="modal-eyebrow">CREATE IN PROJECT</p><h2 id="new-issue-title">New issue</h2></div>
+          <button id="new-issue-close" class="icon-button modal-close" type="button" aria-label="Close new issue form"><span data-icon="close" aria-hidden="true"></span></button>
+        </header>
+        <div class="modal-scroll create-fields" id="composer-scroll">
+          <div class="composer-field-row">
+            <label class="field-label" for="new-issue-repository">Repository</label>
+            <span id="composer-loading" class="inline-loading" hidden><span class="spinner" aria-hidden="true"></span>Loading options</span>
+          </div>
+          <input id="new-issue-repository" class="text-field" name="repository" type="text" autocomplete="off" spellcheck="false" placeholder="owner/repository" list="repository-suggestions" required />
+          <datalist id="repository-suggestions"></datalist>
+          <div id="composer-metadata-error" class="dialog-feedback error-feedback" role="alert" hidden></div>
+          <div id="composer-warnings" class="composer-warnings" role="status" hidden></div>
+
+          <label class="field-label" for="composer-template">Template</label>
+          <select id="composer-template" class="select-field full-field" name="template"><option value="">Blank issue</option></select>
+
+          <label class="field-label" for="new-issue-title-input">Title</label>
+          <input id="new-issue-title-input" class="text-field" name="title" type="text" autocomplete="off" placeholder="A clear, specific title" maxlength="256" required />
+
+          <div class="composer-field-row description-heading">
+            <span class="field-label">Description</span>
+            <div class="editor-tabs" role="tablist" aria-label="Description mode">
+              <button id="composer-write-tab" type="button" role="tab" aria-selected="true" aria-controls="new-issue-body">Write</button>
+              <button id="composer-preview-tab" type="button" role="tab" aria-selected="false" aria-controls="composer-preview">Preview</button>
+            </div>
+          </div>
+          <div id="composer-toolbar" class="markdown-toolbar" role="toolbar" aria-label="Markdown formatting">
+            <button type="button" data-format="bold" aria-label="Bold" title="Bold">B</button>
+            <button type="button" data-format="italic" aria-label="Italic" title="Italic"><em>I</em></button>
+            <button type="button" data-format="quote" aria-label="Quote" title="Quote">“</button>
+            <button type="button" data-format="code" aria-label="Code" title="Code">&lt;/&gt;</button>
+            <button type="button" data-format="link" aria-label="Link" title="Link">Link</button>
+            <button type="button" data-format="list" aria-label="Bulleted list" title="Bulleted list">List</button>
+            <button type="button" data-format="task" aria-label="Task list" title="Task list">Task</button>
+            <button type="button" data-format="mention" aria-label="Mention a user" title="Mention a user">@</button>
+            <button type="button" data-format="reference" aria-label="Reference an issue" title="Reference an issue">#</button>
+          </div>
+          <textarea id="new-issue-body" class="text-field textarea-field composer-editor" name="body" placeholder="Add context, expected behavior, and useful details"></textarea>
+          <div id="composer-preview" class="markdown-preview" role="tabpanel" tabindex="0" hidden></div>
+          <div class="github-handoff">
+            <p id="composer-handoff-copy">Structured issue forms and unsupported files finish on GitHub. Your draft stays here.</p>
+            <button id="composer-github-handoff" class="text-button compact-action" type="button">Continue on GitHub</button>
+          </div>
+
+          <section class="composer-section attachment-section" aria-labelledby="composer-attachments-heading">
+            <div class="composer-section-heading">
+              <div><h3 id="composer-attachments-heading">Attachments</h3><p>Images and videos upload when the issue is created.</p></div>
+              <button id="composer-choose-attachments" class="text-button compact-action" type="button">Choose files</button>
+            </div>
+            <div id="composer-attachment-list" class="attachment-list"></div>
+            <div id="composer-attachment-error" class="dialog-feedback error-feedback" role="alert" hidden></div>
+          </section>
+
+          <section class="composer-section" aria-labelledby="composer-assignees-heading">
+            <div class="composer-section-heading">
+              <div><h3 id="composer-assignees-heading">Assignees</h3><p>Select one or more people.</p></div>
+              <button id="composer-assign-self" class="text-button compact-action" type="button">Assign me</button>
+            </div>
+            <input id="composer-assignee-search" class="text-field compact-search" type="search" autocomplete="off" placeholder="Find a person" aria-label="Find an assignee" />
+            <div id="composer-assignee-choices" class="choice-grid" role="group" aria-label="Assignees"></div>
+          </section>
+
+          <details id="composer-details" class="composer-details">
+            <summary>Details <span id="composer-detail-count" class="detail-count"></span></summary>
+            <div class="composer-details-content">
+              <fieldset class="choice-fieldset"><legend>Labels</legend><div id="composer-label-choices" class="choice-grid" role="group" aria-label="Labels"></div></fieldset>
+              <label class="field-label" for="composer-type">Type</label>
+              <select id="composer-type" class="select-field full-field"><option value="">No type</option></select>
+              <label class="field-label" for="composer-milestone">Milestone</label>
+              <select id="composer-milestone" class="select-field full-field"><option value="">No milestone</option></select>
+              <fieldset class="choice-fieldset"><legend>Additional projects</legend><div id="composer-project-choices" class="choice-grid" role="group" aria-label="Additional projects"></div></fieldset>
+              <label class="field-label" for="new-issue-status">Project status</label>
+              <select id="new-issue-status" class="select-field full-field" name="status"></select>
+              <label class="field-label" for="composer-parent">Parent issue</label>
+              <input id="composer-parent" class="text-field" type="text" autocomplete="off" spellcheck="false" placeholder="#42 or GitHub issue URL" />
+              <label class="field-label" for="composer-blocked-by">Blocked by</label>
+              <textarea id="composer-blocked-by" class="text-field reference-field" placeholder="One issue number or URL per line"></textarea>
+              <label class="field-label" for="composer-blocking">Blocking</label>
+              <textarea id="composer-blocking" class="text-field reference-field" placeholder="One issue number or URL per line"></textarea>
+            </div>
+          </details>
+
+          <div id="composer-success" class="dialog-feedback success-feedback" role="status" hidden><span id="composer-success-copy"></span><button id="composer-open-created" class="text-button compact-action" type="button" hidden>Open issue</button></div>
+          <div id="create-mutation-error" class="dialog-feedback error-feedback" role="alert" hidden></div>
+        </div>
+        <footer class="modal-footer composer-footer"><label class="create-another" for="composer-create-another"><input id="composer-create-another" type="checkbox" /> Create another</label><div class="modal-actions"><button id="new-issue-cancel" class="secondary-button" type="button">Cancel</button><button id="new-issue-submit" class="primary-button" type="submit">Create issue</button></div></footer>
+      </form>
+    </dialog>
+
+    <script src="./vendor/anime.umd.min.js"></script>
+    <script src="./vendor/marked.umd.js"></script>
+    <script src="./vendor/purify.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
