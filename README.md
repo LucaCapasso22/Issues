@@ -47,6 +47,8 @@ Issues refreshes manually or every 60 seconds. If a refresh fails, it keeps the 
 Requirements: macOS 13 or later, Xcode Command Line Tools, and Swift 5.9 or later. No npm installation is required.
 
 ```sh
+git clone https://github.com/LucaCapasso22/Issues.git
+cd Issues
 bash scripts/build-app.sh
 open release/Issues.app
 ```
