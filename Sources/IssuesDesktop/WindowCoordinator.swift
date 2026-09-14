@@ -129,7 +129,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         configureMenus()
         registerShortcut()
         focusObserver = NotificationCenter.default.addObserver(forName: .issuesShowFocus, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.showFloating(mode: "focus") }
+            Task { @MainActor [weak self] in self?.showFloating(mode: "focus") }
         }
         observation = store.objectWillChange.sink { [weak self] _ in
             guard let self, !self.refreshQueued else { return }
@@ -166,7 +166,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         panel.orderFrontRegardless()
         if hoverTimer == nil {
             let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
-                Task { @MainActor in self?.trackHover() }
+                Task { @MainActor [weak self] in self?.trackHover() }
             }
             hoverTimer = timer
             RunLoop.main.add(timer, forMode: .common)
@@ -254,7 +254,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
             picker.allowedContentTypes = ["png", "jpg", "jpeg", "gif", "webp", "svg", "mp4", "mov", "webm"].compactMap { UTType(filenameExtension: $0) }
             picker.beginSheetModal(for: mainWindow) { [weak self] response in
                 guard response == .OK else { return }
-                Task { @MainActor in self?.store.addAttachments(picker.urls) }
+                Task { @MainActor [weak self] in self?.store.addAttachments(picker.urls) }
             }
         case "removeAttachment":
             if let id = message["id"] as? String { store.removeAttachment(id: id) }

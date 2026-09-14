@@ -93,7 +93,7 @@ final class AppStore: ObservableObject {
         self.cacheURLOverride = cacheURL
         restoreSession()
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.startRefresh() }
+            Task { @MainActor [weak self] in self?.startRefresh() }
         }
         if ProcessInfo.processInfo.arguments.contains("--demo") {
             enterDemo()
